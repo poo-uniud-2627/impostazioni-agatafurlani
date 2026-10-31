@@ -17,6 +17,14 @@ import java.util.List;
  */
 public record Impostazioni(int puntiPerVincere, int scartoMinimo, int velocitaPalla) {
 
+    /* con queste costanti ausiliarie posso modificare i parametri velocemente per modifiche future */
+    private static final int MIN_PUNTI = 1;
+    private static final int MAX_PUNTI = 99;
+    private static final int MIN_SCARTO = 1;
+    private static final int MAX_SCARTO = 10;
+    private static final int MIN_VELOCITA = 1;
+    private static final int MAX_VELOCITA = 20;
+
     /** Le impostazioni standard: 11 punti per vincere, scarto minimo 2, velocità della palla 5. */
     public static final Impostazioni STANDARD = new Impostazioni(11, 2, 5);
 
@@ -28,7 +36,9 @@ public record Impostazioni(int puntiPerVincere, int scartoMinimo, int velocitaPa
      * dice quale valore è sbagliato e perché.
      */
     public Impostazioni {
-        // scrivete qui
+        controlla("", "puntiPerVincere", puntiPerVincere, MIN_PUNTI, MAX_PUNTI);
+        controlla("", "scartoMinimo", scartoMinimo, MIN_SCARTO, MAX_SCARTO);
+        controlla("", "velocitaPalla", velocitaPalla, MIN_VELOCITA, MAX_VELOCITA);
     }
 
     /**
@@ -51,7 +61,71 @@ public record Impostazioni(int puntiPerVincere, int scartoMinimo, int velocitaPa
      * Se ci sono errori in più righe, il messaggio è quello della riga più in alto.
      */
     public static Impostazioni leggi(List<String> righe) {
-        return STANDARD; // scrivete qui
+        int punti = STANDARD.puntiPerVincere();
+        int scarto = STANDARD.scartoMinimo();
+        int velocita = STANDARD.velocitaPalla();
+        boolean vistoPunti = false;
+        boolean vistoScarto = false;
+        boolean vistoVelocita = false;
+
+        for (int i = 0; i < righe.size(); i++) {
+            int numero = i + 1;
+            String riga = righe.get(i).trim();   // una riga sola, già senza spazi
+            if (!riga.isEmpty() && !riga.startsWith("#")){
+                int posizioneUguale = riga.indexOf("=");
+                if (posizioneUguale == -1) {
+                    throw new IllegalArgumentException(
+                        "riga " + numero + ": manca l'uguale."
+                    );
+                }
+                String chiave = riga.substring(0, posizioneUguale).trim();
+                int valore;
+                if (!chiave.equals("puntiPerVincere") && !chiave.equals("scartoMinimo") && !chiave.equals("velocitaPalla")) {
+                    throw new IllegalArgumentException(
+                        "riga " + numero + ": chiave sconosciuta."
+                    );
+                }
+                try {
+                    valore = Integer.parseInt(riga.substring(posizioneUguale + 1).trim());
+                }
+                catch (NumberFormatException e) {
+                    throw new IllegalArgumentException(
+                        "riga " + numero + ": il valore non è un numero intero."
+                    );
+                }
+                if (chiave.equals("puntiPerVincere")) {
+                    if (vistoPunti) {
+                        throw new IllegalArgumentException(
+                            "riga " + numero + ": chiave ripetuta."
+                        );
+                    }
+                    punti = valore;
+                    controlla("riga " + numero + ": ", "puntiPerVincere", punti, MIN_PUNTI, MAX_PUNTI);
+                    vistoPunti = true;
+                }
+                else if (chiave.equals("scartoMinimo")) {
+                    if (vistoScarto) {
+                        throw new IllegalArgumentException(
+                            "riga " + numero + ": chiave ripetuta."
+                        );
+                    }
+                    scarto = valore;
+                    controlla("riga " + numero + ": ", "scartoMinimo", scarto, MIN_SCARTO, MAX_SCARTO);
+                    vistoScarto = true;
+                }
+                else if (chiave.equals("velocitaPalla")) {
+                    if (vistoVelocita) {
+                        throw new IllegalArgumentException(
+                            "riga " + numero + ": chiave ripetuta."
+                        );
+                    }
+                    velocita = valore;
+                    controlla("riga " + numero + ": ", "velocitaPalla", velocita, MIN_VELOCITA, MAX_VELOCITA);
+                    vistoVelocita = true;
+                }
+            }
+        }
+        return new Impostazioni(punti, scarto, velocita);
     }
 
     /**
@@ -62,5 +136,19 @@ public record Impostazioni(int puntiPerVincere, int scartoMinimo, int velocitaPa
      */
     public static Impostazioni daFile(Path file) throws IOException {
         return leggi(Files.readAllLines(file));
+    }
+
+    /**
+     * Controlla
+     * Pretende: prefisso e nome non null, minimo <= massimo.
+     * Promette: lancia IllegalArgumentException se valore non è compreso tra minimo e massimo
+     * (inclusi), altrimenti non fa niente. Il messaggio dice quale valore è sbagliato e perché.
+     */
+    private static void controlla (String prefisso, String nome, int valore, int minimo, int massimo){
+        if (valore < minimo || valore > massimo) {
+            throw new IllegalArgumentException(
+                prefisso + nome + " non compreso tra " + minimo + " e " + massimo + ", ma ho ricevuto: " + valore + "."
+            );
+        }
     }
 }
